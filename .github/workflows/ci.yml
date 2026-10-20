@@ -1,0 +1,34 @@
+name: CI
+
+# Opcional según el enunciado del entregable — se incluye igual: valida que
+# las dos imágenes de Docker realmente buildeen antes de llegar a main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build imagen de backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: eventos-btl-backend:ci
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build imagen de frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: eventos-btl-frontend:ci
+          build-args: |
+            VITE_API_URL=http://localhost:3001/api

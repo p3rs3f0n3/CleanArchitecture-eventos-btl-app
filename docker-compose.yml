@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eventos_btl}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eventos_btl}
+      POSTGRES_DB: ${POSTGRES_DB:-eventos_btl}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eventos_btl} -d ${POSTGRES_DB:-eventos_btl}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-eventos_btl}:${POSTGRES_PASSWORD:-eventos_btl}@postgres:5432/${POSTGRES_DB:-eventos_btl}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Definí JWT_SECRET en tu .env antes de levantar el stack}
+      # Dominio público real del backend en producción — las fotos subidas arman su URL con esto.
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3001}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Sin esto, las fotos subidas (personal/eventos/informes) se pierden
+      # cada vez que se recrea el contenedor — ver ARQUITECTURA.md.
+      - backend_uploads:/app/uploads
+    ports:
+      - "3001:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode===200?0:1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Se inlinea en el JS al buildear (Vite) — tiene que ser la URL pública
+        # real del backend, no el nombre interno "backend" de este compose.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:
+  backend_uploads:

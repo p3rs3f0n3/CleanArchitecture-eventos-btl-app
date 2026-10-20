@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Desde Prisma 7, la URL de conexión ya NO va acá — se pasa como "adapter"
+// al construir PrismaClient (ver src/infrastructure/database/prisma.ts) y
+// a prisma.config.ts (para que el CLI de migraciones también sepa conectarse).
+datasource db {
+  provider = "postgresql"
+}
+
+enum EstadoEvento {
+  PLANIFICADO
+  INICIADO
+  EN_CURSO
+  FINALIZADO
+  CANCELADO
+  DETENIDO
+}
+
+enum TipoParticipacion {
+  COORDINADOR
+  PRODUCTOR
+  STAFF
+}
+
+enum RolSistema {
+  ADMIN
+  CLIENTE
+  COORDINADOR
+  PRODUCTOR
+}
+
+enum MomentoReporte {
+  INICIO
+  DURANTE
+  FINALIZACION
+}
+
+// BORRADOR: lo arma el Productor (único dueño mientras esté acá). AJUSTADO:
+// el Coordinador ya lo tocó y confirmó — a partir de acá el Productor ya no
+// edita. PUBLICADO: recién ahí lo ve el Cliente (acción explícita del
+// Coordinador, no automática).
+enum EstadoInforme {
+  BORRADOR
+  ENVIADO
+  AJUSTADO
+  PUBLICADO
+}
+
+enum TipoEntradaInforme {
+  NOVEDAD
+  OBSERVACION
+  PREMIO
+}
+
+enum Sexo {
+  MASCULINO
+  FEMENINO
+  OTRO
+}
+
+// Catálogo abierto de especialidades del staff (Bartender, DJ, Modelo, etc.).
+// El id fijo de "Sin especificar" se usa como default para no romper el
+// Personal cargado ANTES de que este campo existiera (ver migración).
+model Categoria {
+  id                     String   @id @default(uuid())
+  nombre                 String   @unique
+  requiereMedidasFisicas Boolean  @default(false)
+  // true SOLO para "Coordinador"/"Productor": marca personal de GESTIÓN, no
+  // staff de evento. Es lo único que decide si alguien puede recibir un
+  // Usuario con rol de sistema — el staff (Bartender, DJ, Modelo...) nunca.
+  esGestion              Boolean  @default(false)
+  createdAt              DateTime @default(now())
+
+  personal Personal[]
+
+  @@map("categorias")
+}
+
+model Cliente {
+  id               String   @id @default(uuid())
+  nombreEmpresa    String
+  contactoNombre   String
+  contactoEmail    String
+  contactoTelefono String
+  // Default temporal para no romper los clientes creados antes de este campo.
+  direccion        String   @default("Sin especificar")
+  activo           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  eventos Evento[]
+  usuario Usuario?
+
+  @@map("clientes")
+}
+
+model Personal {
+  id             String   @id @default(uuid())
+  nombreCompleto String
+  documento      String   @unique
+  telefono       String
+  // Los 3 campos siguientes tienen default temporal por la misma razón que Cliente.direccion.
+  sexo           Sexo     @default(OTRO)
+  direccion      String   @default("Sin especificar")
+  categoriaId    String   @default("00000000-0000-0000-0000-000000000001")
+  categoria      Categoria @relation(fields: [categoriaId], references: [id])
+  // Opcionales de verdad: solo aplican si la categoría lo requiere (ver Categoria.requiereMedidasFisicas).
+  medidas        String?
+  peso           Float?
+  estatura       Float?
+  tallaRopa      String?
+  fotoUrl        String?
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  asignaciones AsignacionEvento[]
+  usuario      Usuario?
+
+  @@map("personal")
+}
+
+model Usuario {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  rol          RolSistema
+  activo       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  clienteId String?  @unique
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+
+  personalId String?   @unique
+  personal   Personal? @relation(fields: [personalId], references: [id])
+
+  eventosCreados         Evento[]
+  informesCreados        Informe[] @relation("InformeCreadoPor")
+  informesAjustados      Informe[] @relation("InformeAjustadoPor")
+  entradasInforme        EntradaInforme[] @relation("EntradaInformeAutor")
+
+  @@map("usuarios")
+}
+
+model Evento {
+  id          String       @id @default(uuid())
+  nombre      String
+  descripcion String
+  imagenUrl   String?
+  fechaInicio DateTime
+  fechaFin    DateTime
+  estado      EstadoEvento @default(PLANIFICADO)
+  createdAt   DateTime     @default(now())
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  // Quién (qué Usuario COORDINADOR) creó el evento — nullable porque los
+  // eventos de antes de este campo no tienen forma de saberlo. Se usa para
+  // que cada Coordinador vea solo los eventos que él mismo creó.
+  creadoPorId String?
+  creadoPor   Usuario? @relation(fields: [creadoPorId], references: [id], onDelete: SetNull)
+
+  asignaciones AsignacionEvento[]
+  reportes     Reporte[]
+  sedes        Sede[]
+  informe      Informe?
+
+  @@map("eventos")
+}
+
+model AsignacionEvento {
+  id                String            @id @default(uuid())
+  tipoParticipacion TipoParticipacion
+  createdAt         DateTime          @default(now())
+
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  personalId String
+  personal   Personal @relation(fields: [personalId], references: [id])
+
+  @@unique([eventoId, personalId])
+  @@map("asignaciones_evento")
+}
+
+// Catálogo abierto de ciudades — mismo criterio que Categoria: es una lista
+// que va a seguir creciendo, y agregarla es cargar una fila, no tocar código.
+// SOLO ADMIN la mantiene (ver ciudadRoutes.ts); el Coordinador solo elige de
+// esta lista al cargar un punto/Sede.
+model Ciudad {
+  id        String   @id @default(uuid())
+  nombre    String   @unique
+  createdAt DateTime @default(now())
+
+  sedes Sede[]
+
+  @@map("ciudades")
+}
+
+model Sede {
+  id        String   @id @default(uuid())
+  nombre    String
+  direccion String
+  createdAt DateTime @default(now())
+
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  ciudadId String
+  ciudad   Ciudad @relation(fields: [ciudadId], references: [id])
+
+  @@map("sedes")
+}
+
+model Reporte {
+  id          String         @id @default(uuid())
+  momento     MomentoReporte
+  fotoUrl     String?
+  observacion String?
+  fecha       DateTime       @default(now())
+
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  @@map("reportes")
+}
+
+// UN informe por evento (no uno por cambio de estado, a diferencia de
+// Reporte) — se va construyendo in-place a medida que pasa por sus 3
+// estados: lo arma el Productor, lo ajusta el Coordinador, lo publica para
+// que el Cliente lo vea. Separado a propósito de Reporte (la "evidencia"
+// obligatoria de cambiar estado): son conceptos distintos que no se pisan.
+model Informe {
+  id        String        @id @default(uuid())
+  estado    EstadoInforme @default(BORRADOR)
+  createdAt DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  eventoId String @unique
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  // Quién lo armó (Productor) y quién lo ajustó (Coordinador) — nullable
+  // por si esa cuenta se llega a borrar (mismo criterio que Evento.creadoPorId).
+  creadoPorId String?
+  creadoPor   Usuario? @relation("InformeCreadoPor", fields: [creadoPorId], references: [id], onDelete: SetNull)
+
+  ajustadoPorId String?
+  ajustadoPor   Usuario? @relation("InformeAjustadoPor", fields: [ajustadoPorId], references: [id], onDelete: SetNull)
+
+  fotos    FotoInforme[]
+  entradas EntradaInforme[]
+
+  @@map("informes")
+}
+
+// Registro append-only del contenido del Informe: cada guardado del Productor
+// (o del Coordinador) SUMA una entrada con su autor, no pisa la anterior.
+model EntradaInforme {
+  id        String           @id @default(uuid())
+  tipo      TipoEntradaInforme
+  texto     String
+  createdAt DateTime         @default(now())
+
+  informeId String
+  informe   Informe @relation(fields: [informeId], references: [id])
+
+  autorId String?
+  autor   Usuario? @relation("EntradaInformeAutor", fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@map("entradas_informe")
+}
+
+model FotoInforme {
+  id        String   @id @default(uuid())
+  url       String
+  createdAt DateTime @default(now())
+
+  informeId String
+  informe   Informe @relation(fields: [informeId], references: [id])
+
+  @@map("fotos_informe")
+}

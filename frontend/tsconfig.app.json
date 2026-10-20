@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    // Desactivado a propósito: exige "import type" separado en TODOS los
+    // imports de interfaces/tipos — mucha fricción para el patrón de capas
+    // (domain/application) que usamos, donde cada archivo mezcla clases y tipos.
+    "verbatimModuleSyntax": false,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    // Desactivado a propósito: prohíbe "constructor(private readonly x: T)"
+    // (inyección de dependencias por constructor), que es el patrón central
+    // de Clean Architecture que usamos en TODOS los casos de uso y repositorios.
+    "erasableSyntaxOnly": false,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.tsbuildinfo
+
+# Config de asistentes de IA — no es parte del entregable del curso.
+.agents/
+.claude/
+.cursor/
+.devin/
+uploads/personal/*
+!uploads/personal/.gitkeep
+uploads/eventos/*
+!uploads/eventos/.gitkeep
+uploads/informes/*
+!uploads/informes/.gitkeep
