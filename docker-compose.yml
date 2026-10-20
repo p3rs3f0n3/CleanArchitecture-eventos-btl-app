@@ -67,6 +67,13 @@ services:
       - backend
     ports:
       - "127.0.0.1:4180:80"
+    healthcheck:
+      # nginx:alpine trae wget (busybox) pero no curl.
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
 volumes:
   postgres_data:
