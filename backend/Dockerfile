@@ -26,6 +26,10 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 COPY prisma ./prisma
+# prisma.config.ts vive en la raíz del backend, no dentro de prisma/ — sin
+# copiarlo, "prisma migrate deploy" no tiene de dónde sacar el adapter de
+# Postgres ni la datasource.url ("required in your Prisma config file").
+COPY prisma.config.ts ./
 RUN npx prisma generate
 COPY --from=build /app/dist ./dist
 
