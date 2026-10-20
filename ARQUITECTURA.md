@@ -410,4 +410,17 @@ eventos-btl.66.94.101.47.sslip.io {
 
 **`.env` en el servidor** (no versionado): `POSTGRES_PASSWORD` y `JWT_SECRET` propios de producción (no los de desarrollo local), `PUBLIC_URL=https://eventos-btl.66.94.101.47.sslip.io` y `VITE_API_URL=https://eventos-btl.66.94.101.47.sslip.io/api` — son el dominio público real, no `localhost`, porque van embebidos en las URLs de las fotos y en el JS del frontend.
 
-**Por qué Claude no lo hizo él mismo:** no hay acceso no interactivo al VPS desde esta sesión (la llave `vps_casa` tiene passphrase) y usar una contraseña/passphrase en texto plano para loguearse está fuera de las reglas de seguridad de Claude aunque Nelly lo autorice — los comandos los corrió Nelly, con su propia sesión SSH.
+**Desplegado y verificado en vivo (2026-10-20):**
+- Frontend: `https://eventos-btl.66.94.101.47.sslip.io`
+- Backend / health check: `https://eventos-btl.66.94.101.47.sslip.io/health`
+- Repo: `https://github.com/p3rs3f0n3/CleanArchitecture-eventos-btl-app`
+
+**Bugs reales encontrados recién al desplegar contra Docker/Postgres de verdad** (ninguno se veía local, porque Docker Desktop no llegó a levantar en la máquina de desarrollo — la razón por la que se saltó esa prueba y se fue directo al VPS):
+1. `pnpm-workspace.yaml` (la aprobación de scripts de Prisma) se copiaba DESPUÉS de `pnpm install` en el Dockerfile — nunca se aplicaba dentro del build.
+2. `declaration`/`declarationMap` en `tsconfig.json` + el store anidado de pnpm (`.pnpm/@types+...`) → TS2883 "cannot be named" en los 9 archivos de rutas. Se apagaron (esta app no se consume como librería, no sirven para nada).
+3. El stage `build` nunca corría `prisma generate` — `tsc` fallaba con "no exported member" para cada modelo (`Cliente`, `Evento`, etc., que solo existen tras generar el cliente).
+4. `node:22-slim` no trae `openssl` — Prisma no podía detectar la versión de libssl para elegir el motor.
+5. **`postgres:18` cambió el punto de montaje esperado**: ya no es `/var/lib/postgresql/data`, ahora es `/var/lib/postgresql` (el contenedor se niega a arrancar si no).
+6. `prisma.config.ts` (raíz del backend, define el adapter de Postgres) no se copiaba a la imagen de runtime — solo se copiaba la carpeta `prisma/`. Sin él, `prisma migrate deploy` tiraba "datasource.url is required in your Prisma config file".
+
+**Acceso al VPS:** la llave con la que Claude se conectó (`vps_temp_key`, sin passphrase, ver memoria del usuario `vps-njo-access`) es distinta de la que Claude había encontrado primero (`vps_casa`, con passphrase) — de ahí la confusión inicial sobre "no puedo conectarme". Con `vps_casa` (o cualquier credencial con contraseña/passphrase) Claude no se conecta aunque se lo autoricen explícitamente; es una regla de seguridad fija, no una limitación de acceso.
