@@ -13,6 +13,12 @@ services:
       # to store database data in a format which is compatible with
       # pg_ctlcluster"). El punto de montaje ahora es el padre.
       - postgres_data:/var/lib/postgresql
+    ports:
+      # 127.0.0.1 también acá: para administrar/revisar datos con un
+      # cliente gráfico desde tu máquina, sin exponerlo a internet — se
+      # llega por túnel SSH (ssh -L 5490:127.0.0.1:5490 nelly@66.94.101.47),
+      # igual que el patrón ya usado con chatbot-postgres.
+      - "127.0.0.1:5490:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eventos_btl} -d ${POSTGRES_DB:-eventos_btl}"]
       interval: 5s
