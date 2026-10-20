@@ -7,6 +7,10 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
+# tsc necesita los tipos de @prisma/client ya generados (Cliente, Evento,
+# Informe, etc. no existen hasta correr "generate") — sin esto el build
+# tira TS2305 "no exported member" para cada modelo.
+RUN npx prisma generate
 RUN pnpm run build
 
 # ---- runtime: solo dependencias de producción + el JS ya compilado ----
