@@ -15,6 +15,9 @@ RUN pnpm run build
 FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+# node:22-slim no trae openssl — sin esto, Prisma no puede detectar la
+# versión de libssl y el motor que descarga/usa queda adivinado a ciegas.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
