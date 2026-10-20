@@ -1,3 +1,7 @@
 .env
 .DS_Store
 *.log
+
+# Notas con credenciales — nunca al repo, aunque sea público solo "por ahora".
+credenciales*.txt
+*.credentials
