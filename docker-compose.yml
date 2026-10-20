@@ -7,7 +7,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eventos_btl}
       POSTGRES_DB: ${POSTGRES_DB:-eventos_btl}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # OJO: postgres:18 cambió el punto de montaje esperado — ya NO es
+      # ".../data" (eso era hasta la 17). Montar en ".../data" hace que el
+      # contenedor se niegue a arrancar ("these Docker images are configured
+      # to store database data in a format which is compatible with
+      # pg_ctlcluster"). El punto de montaje ahora es el padre.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eventos_btl} -d ${POSTGRES_DB:-eventos_btl}"]
       interval: 5s
