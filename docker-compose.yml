@@ -23,7 +23,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-eventos_btl}:${POSTGRES_PASSWORD:-eventos_btl}@postgres:5432/${POSTGRES_DB:-eventos_btl}?schema=public
       JWT_SECRET: ${JWT_SECRET:?Definí JWT_SECRET en tu .env antes de levantar el stack}
       # Dominio público real del backend en producción — las fotos subidas arman su URL con esto.
-      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3001}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4101}
     depends_on:
       postgres:
         condition: service_healthy
@@ -32,7 +32,11 @@ services:
       # cada vez que se recrea el contenedor — ver ARQUITECTURA.md.
       - backend_uploads:/app/uploads
     ports:
-      - "3001:3000"
+      # 127.0.0.1, no "4101:3000" a secas: sin esto Docker publica en
+      # 0.0.0.0 (abierto a internet). Regla fija de este VPS desde el
+      # endurecimiento de perímetro de 2026-09-19 — lo público entra por
+      # Caddy, nunca por un puerto de Docker expuesto directo.
+      - "127.0.0.1:4101:3000"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', r => process.exit(r.statusCode===200?0:1)).on('error', () => process.exit(1))"]
       interval: 10s
@@ -46,12 +50,12 @@ services:
       args:
         # Se inlinea en el JS al buildear (Vite) — tiene que ser la URL pública
         # real del backend, no el nombre interno "backend" de este compose.
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4101/api}
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "127.0.0.1:4180:80"
 
 volumes:
   postgres_data:

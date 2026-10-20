@@ -374,4 +374,40 @@ de Prisma necesita glibc/openssl y en `alpine` (musl) da problemas conocidos):
 
 **`.github/workflows/ci.yml`** (opcional según el enunciado, incluido igual): en cada push/PR a `main`, buildea las dos imágenes con `docker/build-push-action` (sin `push`) — valida que los Dockerfiles compilen antes de llegar a main.
 
-**Pendiente — necesita una decisión de Nelly, no técnica:** dónde vive el repo de GitHub (cuenta, nombre, público o privado con acceso al instructor) y dónde se despliega en la nube (VPS propia vs. un PaaS). Sin eso no se puede completar la Parte 2 y 3 del entregable (despliegue funcional + enlaces).
+**Decidido:** repo público en `https://github.com/p3rs3f0n3/CleanArchitecture-eventos-btl-app`, despliegue en la VPS propia de Nelly (Contabo, `66.94.101.47`) — ya corre Docker ahí para otros proyectos (Hermes, n8n, WAHA, un EventApp **distinto**, no confundir).
+
+### Despliegue en el VPS (Caddy + sslip.io)
+
+La VPS tiene una regla fija desde el endurecimiento de perímetro de 2026-09-19: **todo `ports:` nuevo va con `127.0.0.1:`** (nunca publicado directo a internet); lo público entra por **Caddy** (corre nativo por systemd, no en Docker). Se ajustó `docker-compose.yml` para cumplir esto:
+
+- `backend`: `127.0.0.1:4101:3000` (puertos `3000/3001` ya los usa el OTRO EventApp — distinto proyecto, mismo VPS).
+- `frontend`: `127.0.0.1:4180:80`.
+- `postgres`: sin puerto publicado — el backend le habla por la red interna de Docker (`postgres:5432`); no hace falta exponerlo ni por loopback.
+
+**Dominio:** sin comprar nada — mismo patrón `sslip.io` que ya usa `vps-dashboard` en esta VPS: `eventos-btl.66.94.101.47.sslip.io` (resuelve directo a la IP, con HTTPS vía `tls internal` de Caddy — primera vez el navegador va a mostrar advertencia de certificado, igual que el dashboard existente).
+
+**Bloque de Caddy agregado** (`/etc/caddy/Caddyfile`, requiere `sudo systemctl reload caddy` después):
+
+```
+eventos-btl.66.94.101.47.sslip.io {
+    tls internal
+    handle /api/* {
+        reverse_proxy 127.0.0.1:4101
+    }
+    handle /uploads/* {
+        reverse_proxy 127.0.0.1:4101
+    }
+    handle /health {
+        reverse_proxy 127.0.0.1:4101
+    }
+    handle {
+        reverse_proxy 127.0.0.1:4180
+    }
+}
+```
+
+**Carpeta en el servidor:** `/root/projects/eventos-btl-app` (mismo criterio que `/root/projects/eventapp`).
+
+**`.env` en el servidor** (no versionado): `POSTGRES_PASSWORD` y `JWT_SECRET` propios de producción (no los de desarrollo local), `PUBLIC_URL=https://eventos-btl.66.94.101.47.sslip.io` y `VITE_API_URL=https://eventos-btl.66.94.101.47.sslip.io/api` — son el dominio público real, no `localhost`, porque van embebidos en las URLs de las fotos y en el JS del frontend.
+
+**Por qué Claude no lo hizo él mismo:** no hay acceso no interactivo al VPS desde esta sesión (la llave `vps_casa` tiene passphrase) y usar una contraseña/passphrase en texto plano para loguearse está fuera de las reglas de seguridad de Claude aunque Nelly lo autorice — los comandos los corrió Nelly, con su propia sesión SSH.
