@@ -4,7 +4,7 @@ import { UnauthorizedError } from "../../domain/exceptions/DomainError";
 import { RolSistema } from "../../domain/entities/Usuario";
 
 export interface AuthenticatedRequest extends Request {
-  usuario?: { usuarioId: string; rol: string };
+  usuario?: { usuarioId: string; rol: string; clienteId?: string; personalId?: string };
 }
 
 /** Verifica el JWT del header Authorization y cuelga los datos del usuario en req.usuario. */

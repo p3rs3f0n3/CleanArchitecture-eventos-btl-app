@@ -4,6 +4,8 @@ export type ClienteInput = Omit<Cliente, 'id' | 'createdAt' | 'activo'>;
 
 export interface ClienteRepository {
   listar(): Promise<Cliente[]>;
+  /** SOLO CLIENTE — resuelve el propio registro, sin poder listar a los demás. */
+  obtenerPropio(): Promise<Cliente>;
   crear(data: ClienteInput): Promise<Cliente>;
   /** SOLO ADMIN */
   actualizar(clienteId: string, data: ClienteInput): Promise<Cliente>;

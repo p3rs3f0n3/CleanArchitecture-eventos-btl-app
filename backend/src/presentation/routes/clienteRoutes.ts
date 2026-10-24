@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   crearCliente,
   listarClientes,
+  obtenerClientePropio,
   crearAccesoCliente,
   actualizarCliente,
   cambiarEstadoActivoCliente,
@@ -14,10 +15,18 @@ export const clienteRoutes = Router();
 // Crear cliente: SOLO ADMIN (decisión de Nelly: el Coordinador ya no crea
 // catálogo, solo elige de listas ya cargadas al armar un evento).
 clienteRoutes.post("/", requireAuth, requireRol(RolSistema.ADMIN), crearCliente);
-// Listar: TODOS los roles autenticados lo necesitan — Coordinador para elegir
-// un cliente al crear un evento, Productor/Cliente para llegar a la pestaña
-// "Eventos" (que depende de tener un cliente seleccionado).
-clienteRoutes.get("/", requireAuth, listarClientes);
+// Listar TODOS los clientes: ADMIN/COORDINADOR (catálogo completo) y
+// PRODUCTOR (necesita resolver el nombre/estado del cliente dueño de CADA
+// evento donde quedó asignado — ver MisEventosPanel.tsx). Bug real
+// encontrado por Nelly: un CLIENTE podía pedir esto y ver a los demás
+// clientes, porque antes estaba abierto a "cualquier autenticado". Un
+// CLIENTE usa /me, no esto.
+clienteRoutes.get("/", requireAuth, requireRol(RolSistema.ADMIN, RolSistema.COORDINADOR, RolSistema.PRODUCTOR), listarClientes);
+
+// Un CLIENTE pide SU PROPIO registro (para ver sus datos y resolver sus
+// eventos) sin poder listar a los demás. Va antes de "/:clienteId" en rutas
+// futuras para no chocar con un parámetro.
+clienteRoutes.get("/me", requireAuth, requireRol(RolSistema.CLIENTE), obtenerClientePropio);
 
 // Dar de alta las CREDENCIALES de un cliente: es manejo de cuentas → SOLO ADMIN.
 clienteRoutes.post("/:clienteId/usuario", requireAuth, requireRol(RolSistema.ADMIN), crearAccesoCliente);

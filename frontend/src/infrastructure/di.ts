@@ -13,6 +13,7 @@ import { RegisterUseCase } from "../application/auth/RegisterUseCase";
 import { CambiarPasswordUseCase } from "../application/auth/CambiarPasswordUseCase";
 import { CrearClienteUseCase } from "../application/cliente/CrearClienteUseCase";
 import { ListarClientesUseCase } from "../application/cliente/ListarClientesUseCase";
+import { ObtenerClientePropioUseCase } from "../application/cliente/ObtenerClientePropioUseCase";
 import { CrearAccesoClienteUseCase } from "../application/cliente/CrearAccesoClienteUseCase";
 import { ActualizarClienteUseCase } from "../application/cliente/ActualizarClienteUseCase";
 import { CambiarEstadoActivoClienteUseCase } from "../application/cliente/CambiarEstadoActivoClienteUseCase";
@@ -67,6 +68,7 @@ export const useCases = {
 
   crearCliente: new CrearClienteUseCase(clienteRepository),
   listarClientes: new ListarClientesUseCase(clienteRepository),
+  obtenerClientePropio: new ObtenerClientePropioUseCase(clienteRepository),
   crearAccesoCliente: new CrearAccesoClienteUseCase(clienteRepository),
   actualizarCliente: new ActualizarClienteUseCase(clienteRepository),
   cambiarEstadoActivoCliente: new CambiarEstadoActivoClienteUseCase(clienteRepository),

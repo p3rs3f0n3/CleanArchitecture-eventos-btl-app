@@ -23,6 +23,7 @@ import { ListarAsignacionesPorEventoUseCase } from "../application/evento/Listar
 import { SubirImagenEventoUseCase } from "../application/evento/SubirImagenEventoUseCase";
 import { CrearClienteUseCase } from "../application/cliente/CrearClienteUseCase";
 import { ListarClientesUseCase } from "../application/cliente/ListarClientesUseCase";
+import { ObtenerClientePropioUseCase } from "../application/cliente/ObtenerClientePropioUseCase";
 import { CrearPersonalUseCase } from "../application/personal/CrearPersonalUseCase";
 import { ListarPersonalUseCase } from "../application/personal/ListarPersonalUseCase";
 import { AsignarPersonalAEventoUseCase } from "../application/personal/AsignarPersonalAEventoUseCase";
@@ -88,6 +89,7 @@ export const useCases = {
 
   crearCliente: new CrearClienteUseCase(clienteRepository),
   listarClientes: new ListarClientesUseCase(clienteRepository),
+  obtenerClientePropio: new ObtenerClientePropioUseCase(clienteRepository),
   actualizarCliente: new ActualizarClienteUseCase(clienteRepository),
   cambiarEstadoActivoCliente: new CambiarEstadoActivoClienteUseCase(clienteRepository, usuarioRepository),
 

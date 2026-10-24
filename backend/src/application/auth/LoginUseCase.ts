@@ -38,7 +38,12 @@ export class LoginUseCase {
       throw new UnauthorizedError('Tu cuenta está bloqueada. Contactá a un administrador.');
     }
 
-    const token = this.tokenGenerator.generate({ usuarioId: usuario.id, rol: usuario.rol });
+    const token = this.tokenGenerator.generate({
+      usuarioId: usuario.id,
+      rol: usuario.rol,
+      clienteId: usuario.clienteId,
+      personalId: usuario.personalId,
+    });
     return { token, usuario };
   }
 }

@@ -7,6 +7,10 @@ export class ApiClienteRepository implements ClienteRepository {
     return ApiClient.get<Cliente[]>('/clientes');
   }
 
+  obtenerPropio(): Promise<Cliente> {
+    return ApiClient.get<Cliente>('/clientes/me');
+  }
+
   crear(data: ClienteInput): Promise<Cliente> {
     return ApiClient.post<Cliente>('/clientes', data);
   }

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { useCases } from "../../infrastructure/di";
 import { Cliente } from "../../domain/entities/Cliente";
 import { RolSistema } from "../../domain/entities/Usuario";
+import { AuthenticatedRequest } from "../middlewares/authMiddleware";
 
 function serializeCliente(cliente: Cliente) {
   return {
@@ -25,6 +26,12 @@ export async function crearCliente(req: Request, res: Response): Promise<void> {
 export async function listarClientes(_req: Request, res: Response): Promise<void> {
   const clientes = await useCases.listarClientes.execute();
   res.status(200).json(clientes.map(serializeCliente));
+}
+
+/** SOLO el propio CLIENTE — el id sale del token, nunca de un parámetro que el cliente pueda manipular. */
+export async function obtenerClientePropio(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const cliente = await useCases.obtenerClientePropio.execute(req.usuario!.clienteId);
+  res.status(200).json(serializeCliente(cliente));
 }
 
 /**

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCases } from '../../infrastructure/di';
 import { Cliente } from '../../domain/entities/Cliente';
 import { RolSistema } from '../../domain/entities/Usuario';
 import { ClientesPanel } from '../components/cliente/ClientesPanel';
@@ -25,7 +26,10 @@ const TABS_POR_ROL: Record<RolSistema, Tab[]> = {
   // El Productor no elige cliente: solo hace seguimiento de los eventos
   // donde ya quedó asignado como responsable (ver MisEventosPanel.tsx).
   PRODUCTOR: ['eventos', 'mi cuenta'],
-  CLIENTE: ['clientes', 'eventos', 'mi cuenta'],
+  // El Cliente NO ve el catálogo de clientes (sería ver a otras empresas) —
+  // bug real encontrado por Nelly. Solo ve sus propios eventos y su cuenta;
+  // "eventos" se resuelve solo, vía /clientes/me, sin pasar por un selector.
+  CLIENTE: ['eventos', 'mi cuenta'],
 };
 
 export function DashboardPage() {
@@ -33,6 +37,15 @@ export function DashboardPage() {
   const tabsDisponibles = usuario ? TABS_POR_ROL[usuario.rol] : [];
   const [tab, setTab] = useState<Tab>(tabsDisponibles[0] ?? 'mi cuenta');
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Cliente | null>(null);
+  const [clientePropio, setClientePropio] = useState<Cliente | null>(null);
+
+  // El Cliente no elige de una lista — resuelve SU PROPIO registro apenas
+  // entra, igual que el Productor resuelve sus eventos sin seleccionar nada.
+  useEffect(() => {
+    if (usuario?.rol === 'CLIENTE') {
+      useCases.obtenerClientePropio.execute().then(setClientePropio);
+    }
+  }, [usuario]);
 
   function cambiarTab(t: Tab) {
     setTab(t);
@@ -69,7 +82,9 @@ export function DashboardPage() {
       <main className="p-6 bg-white border-t border-gray-200 min-h-[60vh]">
         {tab === 'clientes' && <ClientesPanel clienteSeleccionado={clienteSeleccionado} onSeleccionar={setClienteSeleccionado} />}
         {tab === 'eventos' && usuario?.rol === 'PRODUCTOR' && <MisEventosPanel />}
-        {tab === 'eventos' && usuario?.rol !== 'PRODUCTOR' &&
+        {tab === 'eventos' && usuario?.rol === 'CLIENTE' &&
+          (clientePropio ? <EventosPanel cliente={clientePropio} /> : <p className="text-gray-500">Cargando...</p>)}
+        {tab === 'eventos' && usuario?.rol !== 'PRODUCTOR' && usuario?.rol !== 'CLIENTE' &&
           (clienteSeleccionado ? (
             <EventosPanel cliente={clienteSeleccionado} />
           ) : (

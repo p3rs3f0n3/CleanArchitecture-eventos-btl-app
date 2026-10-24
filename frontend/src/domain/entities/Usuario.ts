@@ -4,6 +4,8 @@ export interface Usuario {
   id: string;
   email: string;
   rol: RolSistema;
+  clienteId?: string;
+  personalId?: string;
 }
 
 /** Vista extendida que solo usa el panel de Administración (ADMIN). */

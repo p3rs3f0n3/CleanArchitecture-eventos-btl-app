@@ -20,7 +20,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   const { token, usuario } = await useCases.login.execute({ email, password });
   res.status(200).json({
     token,
-    usuario: { id: usuario.id, email: usuario.email, rol: usuario.rol },
+    usuario: { id: usuario.id, email: usuario.email, rol: usuario.rol, clienteId: usuario.clienteId, personalId: usuario.personalId },
   });
 }
 
